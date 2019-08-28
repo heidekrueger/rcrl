@@ -2,6 +2,17 @@ import torch
 #pylint: disable=no-member,not-callable
 
 class Cube:
+    """ 
+    This class represents a rubics cube with a simple representation, resulting
+    in 12 possible actions:
+    Each of the 6 facets can either be turned clockwise or counterclockwise.
+    
+    The state of the cube is represented by a 6x3x3 tensor. In our action-representation,
+    the color of the middle-cuboid in a facet will never change, thus each facet is
+    associated with a specific color. Thus board[f][r][c] represents the color of
+    the row r, col c cuboid of facet f. We always have board[f][1][1] == f.
+    The game is solved if board[f][i][j] == f for all f,i,j.
+    """
     
     def __init__(self):
         self._solved_state = torch.cat(
@@ -10,12 +21,16 @@ class Cube:
 
         self.board = self._solved_state.clone()
         self.moves = 0
+        
+        #define both forward and backward map from color/face indices to names.
         self.colors = {0:'blue', 1:'red',
                        2:'yellow', 3:'green',
                        4:'orange', 5:'white'}
         self.ci = {v:k for k,v in self.colors.items()}
+        
         self.turns = ['clockwise', 'counterclockwise']
-
+        
+        # define colors to print the cube to the terminal
         self._print_color = [
             '\x1b[5;30;44m', #b
             '\x1b[6;30;41m', #r
@@ -24,8 +39,6 @@ class Cube:
             '\x1b[6;30;45m', #o
             '\x1b[6;30;47m' #w
         ]
-
-        # shuffle
     
     def is_solved(self):
         return True if torch.all(self.board == self._solved_state) else False
@@ -46,26 +59,28 @@ class Cube:
         
         if print: self.print_cube()
 
-
     def _cuboid_str(self,face,i,o) ->str:
+        """Cuboid state with colored terminal printing."""
         col = self.board[face, i, o].item()
         return self._print_color[col] + ' ' + str(col)
 
     def _row_str(self, face, i):
+        """String representation of `i`th row of facet `face`"""
         s = ''
         for j in range(3):
             s += self._cuboid_str(face,i,j) 
-        s += '\x1b[0m'
-        return s
+        s += '\x1b[0m' # set terminal print color back to normal
+        return s 
         
     def print_cube(self):
+        """Print the cube in a 3x2 layout."""
         for f in range(3): #right-next-faces
             for r in range(3): # rows
                 print(self._row_str(2*f,r) + ' ' + self._row_str(2*f+1,r))
             print('')
 
-
     def turn(self, face, direction = 'clockwise', print=False):
+        """Turn a facet in the indicated direction."""
 
         if isinstance(face, str):
             face = self.ci[face]
